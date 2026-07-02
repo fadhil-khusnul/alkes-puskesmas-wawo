@@ -1,0 +1,8 @@
+{
+  "name": "Sistem Pengelolaan Alat Medis - Puskesmas Wawo",
+  "description": "Digitalisasi pencatatan, pemantauan, dan pelaporan alat medis padat (spuit, perban, dll) untuk meningkatkan efisiensi di Puskesmas Wawo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
