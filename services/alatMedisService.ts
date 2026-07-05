@@ -1,4 +1,13 @@
 import { supabase } from "../lib/supabaseClient";
+import {
+  devGetAlatMedis,
+  devCreateAlatMedis,
+  devUpdateAlatMedis,
+  devDeleteAlatMedis,
+  devGetDashboardStats,
+} from "../app/actions";
+
+const isDev = process.env.NEXT_PUBLIC_APP_ENV === "development";
 
 export type AlatMedis = {
   id: string;
@@ -13,6 +22,16 @@ export type AlatMedis = {
 };
 
 export const getAlatMedis = async (): Promise<AlatMedis[]> => {
+  if (isDev) {
+    const data = await devGetAlatMedis();
+    // serialize dates
+    return data.map((d) => ({
+      ...d,
+      created_at: d.created_at.toISOString(),
+      updated_at: d.updated_at.toISOString(),
+    })) as AlatMedis[];
+  }
+
   const { data, error } = await supabase
     .from("alat_medis")
     .select("*")
@@ -25,6 +44,15 @@ export const getAlatMedis = async (): Promise<AlatMedis[]> => {
 export const createAlatMedis = async (
   alat: Omit<AlatMedis, "id" | "created_at" | "updated_at">,
 ): Promise<AlatMedis> => {
+  if (isDev) {
+    const data = await devCreateAlatMedis(alat);
+    return {
+      ...data,
+      created_at: data.created_at.toISOString(),
+      updated_at: data.updated_at.toISOString(),
+    } as AlatMedis;
+  }
+
   const { data: userData } = await supabase.auth.getUser();
   const input_by = userData?.user?.id;
 
@@ -45,6 +73,15 @@ export const updateAlatMedis = async (
   id: string,
   updates: Partial<AlatMedis>,
 ): Promise<AlatMedis> => {
+  if (isDev) {
+    const data = await devUpdateAlatMedis(id, updates);
+    return {
+      ...data,
+      created_at: data.created_at.toISOString(),
+      updated_at: data.updated_at.toISOString(),
+    } as AlatMedis;
+  }
+
   const { data, error } = await supabase
     .from("alat_medis")
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -60,12 +97,21 @@ export const updateAlatMedis = async (
 };
 
 export const deleteAlatMedis = async (id: string): Promise<void> => {
+  if (isDev) {
+    await devDeleteAlatMedis(id);
+    return;
+  }
+
   const { error } = await supabase.from("alat_medis").delete().eq("id", id);
 
   if (error) throw error;
 };
 
 export const getDashboardStats = async () => {
+  if (isDev) {
+    return devGetDashboardStats();
+  }
+
   const { count: totalAlat, error: countError } = await supabase
     .from("alat_medis")
     .select("*", { count: "exact", head: true });

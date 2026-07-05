@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
+import { devLogin, devRegister } from '../actions';
+
+const isDev = process.env.NEXT_PUBLIC_APP_ENV === 'development';
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -23,6 +26,21 @@ export default function LoginPage() {
     const nama = formData.get('nama') as string;
 
     try {
+      if (isDev) {
+        if (isLogin) {
+          await devLogin(email, password);
+          setSuccessMsg('Berhasil masuk! Mengarahkan ke dashboard...');
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 800);
+        } else {
+          await devRegister(email, password, nama);
+          setSuccessMsg('Pendaftaran berhasil! Silakan masuk.');
+          setIsLogin(true);
+        }
+        return;
+      }
+
       const isDemoMode = 
         !process.env.NEXT_PUBLIC_SUPABASE_URL || 
         process.env.NEXT_PUBLIC_SUPABASE_URL === 'YOUR_SUPABASE_URL' ||

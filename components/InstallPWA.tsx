@@ -40,7 +40,7 @@ export default function InstallPWA() {
   if (!showInstallPrompt) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50 flex items-start gap-4 animate-in slide-in-from-bottom-5">
+    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50 flex items-start gap-4 transition-all transform duration-300 translate-y-0">
       <div className="flex-1">
         <h3 className="font-bold text-slate-900 text-sm mb-1">
           Instal Aplikasi Alat Medis

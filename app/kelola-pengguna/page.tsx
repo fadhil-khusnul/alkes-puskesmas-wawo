@@ -39,13 +39,23 @@ export default function KelolaPenggunaPage() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const { supabase } = await import("../../lib/supabaseClient");
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-         const { data: userRecord } = await supabase.from('users').select('role').eq('id', user.id).single();
-         setCurrentUserRole(userRecord?.role || 'staf');
+      if (process.env.NEXT_PUBLIC_APP_ENV === "development") {
+        const { devGetUser } = await import("../../app/actions");
+        const { data: { user } } = await devGetUser();
+        if (user) {
+          setCurrentUserRole(user.role || 'staf');
+        } else {
+          setCurrentUserRole('admin'); // Fallback
+        }
       } else {
-         setCurrentUserRole('admin'); // Fallback for demo
+        const { supabase } = await import("../../lib/supabaseClient");
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+           const { data: userRecord } = await supabase.from('users').select('role').eq('id', user.id).single();
+           setCurrentUserRole(userRecord?.role || 'staf');
+        } else {
+           setCurrentUserRole('admin'); // Fallback for demo
+        }
       }
       await fetchData();
       setLoading(false);

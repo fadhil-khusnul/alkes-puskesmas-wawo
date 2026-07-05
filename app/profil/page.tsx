@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { User } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
+import { devGetUser, devUpdateUser } from "../../app/actions";
+
+const isDev = process.env.NEXT_PUBLIC_APP_ENV === "development";
 
 export default function ProfilPage() {
   const [loading, setLoading] = useState(true);
@@ -21,6 +24,18 @@ export default function ProfilPage() {
     const fetchProfile = async () => {
       try {
         setLoading(true);
+        if (isDev) {
+          const { data: { user } } = await devGetUser();
+          if (user) {
+            setFormData((prev) => ({
+              ...prev,
+              username: user.nama || user.email.split("@")[0] || "",
+              peran: user.role || "Staf",
+            }));
+          }
+          return;
+        }
+
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
@@ -66,22 +81,34 @@ export default function ProfilPage() {
         updates.password = formData.newPassword;
       }
 
-      // We might also want to update the user's name in our public.users table
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-         if (formData.username) {
-            const { error: dbError } = await supabase
-              .from("users")
-              .update({ nama: formData.username })
-              .eq("id", user.id);
-            
-            if (dbError) throw dbError;
-         }
+      if (isDev) {
+        const { data: { user } } = await devGetUser();
+        if (user) {
+          if (formData.username) {
+            updates.nama = formData.username;
+          }
+          if (Object.keys(updates).length > 0) {
+            await devUpdateUser(user.id, updates);
+          }
+        }
+      } else {
+        // We might also want to update the user's name in our public.users table
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+           if (formData.username) {
+              const { error: dbError } = await supabase
+                .from("users")
+                .update({ nama: formData.username })
+                .eq("id", user.id);
+              
+              if (dbError) throw dbError;
+           }
 
-         if (Object.keys(updates).length > 0) {
-           const { error: authError } = await supabase.auth.updateUser(updates);
-           if (authError) throw authError;
-         }
+           if (Object.keys(updates).length > 0) {
+             const { error: authError } = await supabase.auth.updateUser(updates);
+             if (authError) throw authError;
+           }
+        }
       }
 
       setMessage({ type: "success", text: "Profil berhasil diperbarui." });

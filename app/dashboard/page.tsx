@@ -34,13 +34,23 @@ export default function DashboardPage() {
         setLoading(true);
         // We can optionally fetch the role from the token or user table, here we just show a generic greeting or check local state if possible.
         // For simplicity, let's just grab from document.cookie or default
-        const { supabase } = await import("../../lib/supabaseClient");
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-           const { data: userRecord } = await supabase.from('users').select('role').eq('id', user.id).single();
-           setUserRole(userRecord?.role || 'staf');
+        if (process.env.NEXT_PUBLIC_APP_ENV === "development") {
+          const { devGetUser } = await import("../../app/actions");
+          const { data: { user } } = await devGetUser();
+          if (user) {
+            setUserRole(user.role || 'staf');
+          } else {
+            setUserRole('admin/staf');
+          }
         } else {
-           setUserRole('admin/staf'); // Demo mode fallback
+          const { supabase } = await import("../../lib/supabaseClient");
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+             const { data: userRecord } = await supabase.from('users').select('role').eq('id', user.id).single();
+             setUserRole(userRecord?.role || 'staf');
+          } else {
+             setUserRole('admin/staf'); // Demo mode fallback
+          }
         }
         const data = await getDashboardStats();
         setStats(data);

@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { devGetUser, devLogout } from "../app/actions";
+
+const isDev = process.env.NEXT_PUBLIC_APP_ENV === "development";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -32,6 +35,16 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const fetchUser = async () => {
+      if (isDev) {
+        const { data: { user } } = await devGetUser();
+        if (user) {
+          setUserData({
+            name: user.nama || user.email.split('@')[0],
+            role: user.role === "admin" ? "Administrator" : "Staf",
+          });
+        }
+        return;
+      }
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: userRecord } = await supabase.from('users').select('nama, role').eq('id', user.id).single();
@@ -45,6 +58,12 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleLogout = async () => {
+    if (isDev) {
+      await devLogout();
+      window.location.href = "/login";
+      return;
+    }
+
     const isDemoMode =
       !process.env.NEXT_PUBLIC_SUPABASE_URL ||
       process.env.NEXT_PUBLIC_SUPABASE_URL === "YOUR_SUPABASE_URL" ||

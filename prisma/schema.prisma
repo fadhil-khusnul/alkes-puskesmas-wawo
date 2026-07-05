@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model User {
+  id         String       @id @default(uuid())
+  nama       String
+  email      String       @unique
+  role       String
+  password   String?
+  created_at DateTime     @default(now())
+  alat_medis AlatMedis[]
+  log_laporan LogLaporan[]
+
+  @@map("users")
+}
+
+model AlatMedis {
+  id         String       @id @default(uuid())
+  nama_alat  String
+  jenis_alat String
+  jumlah     Int          @default(0)
+  status     String
+  catatan    String?
+  input_by   String?
+  created_at DateTime     @default(now())
+  updated_at DateTime     @default(now()) @updatedAt
+  user       User?        @relation(fields: [input_by], references: [id])
+  log_laporan LogLaporan[]
+
+  @@map("alat_medis")
+}
+
+model LogLaporan {
+  id             String    @id @default(uuid())
+  alat_id        String
+  tipe_transaksi String
+  jumlah         Int
+  petugas_id     String
+  waktu_lapor    DateTime  @default(now())
+  alat_medis     AlatMedis @relation(fields: [alat_id], references: [id], onDelete: Cascade)
+  petugas        User      @relation(fields: [petugas_id], references: [id])
+
+  @@map("log_laporan")
+}

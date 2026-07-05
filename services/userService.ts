@@ -1,4 +1,7 @@
 import { supabase } from "../lib/supabaseClient";
+import { devGetUsers, devCreateUser, devUpdateUser, devDeleteUser } from "../app/actions";
+
+const isDev = process.env.NEXT_PUBLIC_APP_ENV === "development";
 
 export type UserRole = "admin" | "staf";
 
@@ -11,6 +14,14 @@ export type User = {
 };
 
 export const getUsers = async (): Promise<User[]> => {
+  if (isDev) {
+    const data = await devGetUsers();
+    return data.map((u) => ({
+      ...u,
+      created_at: u.created_at.toISOString(),
+    })) as User[];
+  }
+
   const { data, error } = await supabase
     .from("users")
     .select("*")
@@ -23,6 +34,14 @@ export const getUsers = async (): Promise<User[]> => {
 export const createUser = async (
   user: Omit<User, "id" | "created_at">,
 ): Promise<User> => {
+  if (isDev) {
+    const data = await devCreateUser(user);
+    return {
+      ...data,
+      created_at: data.created_at.toISOString(),
+    } as User;
+  }
+
   // Try to create an auth user first. Since we are on client side, this will sign in the new user.
   // To avoid disrupting the current admin's session, a proper implementation would use an Edge Function 
   // with service_role key. For this demo, we will attempt signUp.
@@ -69,6 +88,14 @@ export const updateUser = async (
   id: string,
   updates: Partial<User>,
 ): Promise<User> => {
+  if (isDev) {
+    const data = await devUpdateUser(id, updates);
+    return {
+      ...data,
+      created_at: data.created_at.toISOString(),
+    } as User;
+  }
+
   const { data, error } = await supabase
     .from("users")
     .update({ ...updates })
@@ -84,6 +111,11 @@ export const updateUser = async (
 };
 
 export const deleteUser = async (id: string): Promise<void> => {
+  if (isDev) {
+    await devDeleteUser(id);
+    return;
+  }
+
   const { error } = await supabase.from("users").delete().eq("id", id);
 
   if (error) throw error;
