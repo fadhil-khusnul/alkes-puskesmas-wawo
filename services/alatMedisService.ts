@@ -12,40 +12,7 @@ export type AlatMedis = {
   updated_at?: string;
 };
 
-// Fallback dummy data if Supabase is not configured yet (for UI preview)
-let mockData: AlatMedis[] = [
-  {
-    id: "1",
-    nama_alat: "Jarum Suntik 3cc",
-    jenis_alat: "Habis Pakai",
-    jumlah: 500,
-    status: "Baik",
-  },
-  {
-    id: "2",
-    nama_alat: "Kasa Steril 16x16",
-    jenis_alat: "Perban",
-    jumlah: 150,
-    status: "Baik",
-  },
-  {
-    id: "3",
-    nama_alat: "Kursi Roda",
-    jenis_alat: "Alat Bantu",
-    jumlah: 2,
-    status: "Rusak",
-    catatan: "Roda macet",
-  },
-];
-
 export const getAlatMedis = async (): Promise<AlatMedis[]> => {
-  if (
-    process.env.NEXT_PUBLIC_SUPABASE_URL === "YOUR_SUPABASE_URL" ||
-    !process.env.NEXT_PUBLIC_SUPABASE_URL
-  ) {
-    return Promise.resolve(mockData); // Return mock data if credentials aren't set
-  }
-
   const { data, error } = await supabase
     .from("alat_medis")
     .select("*")
@@ -58,26 +25,19 @@ export const getAlatMedis = async (): Promise<AlatMedis[]> => {
 export const createAlatMedis = async (
   alat: Omit<AlatMedis, "id" | "created_at" | "updated_at">,
 ): Promise<AlatMedis> => {
-  if (
-    process.env.NEXT_PUBLIC_SUPABASE_URL === "YOUR_SUPABASE_URL" ||
-    !process.env.NEXT_PUBLIC_SUPABASE_URL
-  ) {
-    const newAlat = {
-      ...alat,
-      id: Math.random().toString(),
-      created_at: new Date().toISOString(),
-    };
-    mockData = [newAlat, ...mockData];
-    return Promise.resolve(newAlat);
-  }
+  const { data: userData } = await supabase.auth.getUser();
+  const input_by = userData?.user?.id;
 
   const { data, error } = await supabase
     .from("alat_medis")
-    .insert([alat])
+    .insert([{ ...alat, input_by }])
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Supabase insert error:", error);
+    throw new Error(error.message || "Failed to create alat medis");
+  }
   return data as AlatMedis;
 };
 
@@ -85,16 +45,6 @@ export const updateAlatMedis = async (
   id: string,
   updates: Partial<AlatMedis>,
 ): Promise<AlatMedis> => {
-  if (
-    process.env.NEXT_PUBLIC_SUPABASE_URL === "YOUR_SUPABASE_URL" ||
-    !process.env.NEXT_PUBLIC_SUPABASE_URL
-  ) {
-    mockData = mockData.map((item) =>
-      item.id === id ? { ...item, ...updates } : item,
-    );
-    return Promise.resolve(mockData.find((item) => item.id === id)!);
-  }
-
   const { data, error } = await supabase
     .from("alat_medis")
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -102,39 +52,20 @@ export const updateAlatMedis = async (
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Supabase update error:", error);
+    throw new Error(error.message || "Failed to update alat medis");
+  }
   return data as AlatMedis;
 };
 
 export const deleteAlatMedis = async (id: string): Promise<void> => {
-  if (
-    process.env.NEXT_PUBLIC_SUPABASE_URL === "YOUR_SUPABASE_URL" ||
-    !process.env.NEXT_PUBLIC_SUPABASE_URL
-  ) {
-    mockData = mockData.filter((item) => item.id !== id);
-    return Promise.resolve();
-  }
-
   const { error } = await supabase.from("alat_medis").delete().eq("id", id);
 
   if (error) throw error;
 };
 
 export const getDashboardStats = async () => {
-  if (
-    process.env.NEXT_PUBLIC_SUPABASE_URL === "YOUR_SUPABASE_URL" ||
-    !process.env.NEXT_PUBLIC_SUPABASE_URL
-  ) {
-    const totalAlat = mockData.length;
-    const stokMenipis = mockData.filter((item) => item.status === "Habis" || item.jumlah < 50).length;
-    return Promise.resolve({
-      totalAlat,
-      stokMenipis,
-      alatKeluar: 20, // Dummy
-      efisiensi: 94.2, // Dummy
-    });
-  }
-
   const { count: totalAlat, error: countError } = await supabase
     .from("alat_medis")
     .select("*", { count: "exact", head: true });
@@ -148,21 +79,36 @@ export const getDashboardStats = async () => {
 
   if (stokError) throw stokError;
 
-  const { count: alatKeluar, error: keluarError } = await supabase
-    .from("log_laporan")
-    .select("*", { count: "exact", head: true })
-    .eq("tipe_transaksi", "keluar")
-    .gte(
-      "waktu_lapor",
-      new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    );
+  const { count: totalPengguna, error: usersError } = await supabase
+    .from("users")
+    .select("*", { count: "exact", head: true });
 
-  if (keluarError) console.error(keluarError);
+  if (usersError) console.error(usersError);
+
+  const { data: allAlat, error: allAlatError } = await supabase
+    .from("alat_medis")
+    .select("jenis_alat, jumlah");
+
+  if (allAlatError) throw allAlatError;
+
+  const chartDataMap: Record<string, number> = {};
+  allAlat?.forEach((alat) => {
+    if (alat.jenis_alat) {
+      chartDataMap[alat.jenis_alat] = (chartDataMap[alat.jenis_alat] || 0) + (alat.jumlah || 0);
+    }
+  });
+
+  const chartData = Object.entries(chartDataMap).map(([name, jumlah]) => ({
+    name,
+    jumlah,
+  }));
 
   return {
     totalAlat: totalAlat || 0,
     stokMenipis: stokMenipis || 0,
-    alatKeluar: alatKeluar || 0,
+    totalPengguna: totalPengguna || 0,
     efisiensi: 94.2, // Placeholder
+    chartData,
   };
 };
+

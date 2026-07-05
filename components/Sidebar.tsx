@@ -12,7 +12,8 @@ import {
   LogOut,
   Menu,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -25,7 +26,37 @@ const navItems = [
 
 export default function Sidebar({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [userData, setUserData] = useState({ name: "Admin System", role: "Administrator" });
   const pathname = usePathname();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: userRecord } = await supabase.from('users').select('nama, role').eq('id', user.id).single();
+        setUserData({
+          name: userRecord?.nama || user.email?.split('@')[0] || "User",
+          role: userRecord?.role === "admin" ? "Administrator" : "Staf"
+        });
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handleLogout = async () => {
+    const isDemoMode =
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL === "YOUR_SUPABASE_URL" ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL === "https://placeholder-url.supabase.co";
+
+    if (isDemoMode) {
+      document.cookie = "demo_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    } else {
+      await supabase.auth.signOut();
+    }
+    window.location.href = "/login";
+  };
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden text-sm">
@@ -82,21 +113,78 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
           </ul>
 
           <div className="p-6 border-t border-slate-800 mt-6">
-            <Link
-              href="/login"
-              className="flex items-center gap-3 px-4 py-2.5 text-rose-400 hover:bg-slate-800 hover:text-rose-300 rounded-md transition-colors"
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-rose-400 hover:bg-slate-800 hover:text-rose-300 rounded-md transition-colors"
             >
               <LogOut className="w-4 h-4" />
               Keluar
-            </Link>
+            </button>
           </div>
         </nav>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Desktop Header */}
+        <header className="hidden lg:flex h-16 bg-white border-b border-slate-200 px-8 items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            <h2 className="text-lg font-semibold text-slate-800 tracking-tight">
+              {navItems.find((item) => item.href === pathname)?.name ||
+                "Dashboard"}
+            </h2>
+            <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-medium uppercase tracking-wider">
+              {new Date().toLocaleDateString("id-ID", {
+                month: "long",
+                year: "numeric",
+              })}
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <button 
+                className="flex items-center gap-3 focus:outline-none hover:bg-slate-50 p-1.5 rounded-lg transition-colors"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
+              >
+                <div className="text-right">
+                  <p className="text-xs font-bold text-slate-700 leading-tight">
+                    {userData.name}
+                  </p>
+                  <p className="text-[10px] text-slate-500 uppercase">{userData.role}</p>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-xs uppercase">
+                  {userData.name.charAt(0)}
+                </div>
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-50 overflow-hidden">
+                  <div className="py-1">
+                    <Link
+                      href="/profil"
+                      className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      Profil Saya
+                    </Link>
+                    <div className="h-px bg-slate-100 my-1"></div>
+                    <button
+                      onClick={handleLogout}
+                      className="flex w-full items-center px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Keluar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
         {/* Mobile Header */}
-        <div className="lg:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200">
+        <div className="lg:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200 shrink-0">
           <div className="flex items-center">
             <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center font-bold text-white mr-3">
               W
@@ -114,7 +202,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Page Content */}
-        <main className="flex-1 flex flex-col h-full overflow-hidden">
+        <main className="flex-1 flex flex-col h-full overflow-hidden p-4 sm:p-6 lg:p-8 overflow-y-auto">
           {children}
         </main>
       </div>

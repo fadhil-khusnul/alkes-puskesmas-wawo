@@ -10,30 +10,7 @@ export type User = {
   created_at?: string;
 };
 
-// Fallback dummy data if Supabase is not configured yet (for UI preview)
-let mockUsers: User[] = [
-  {
-    id: "d1a3c638-4e3a-4a25-8d9e-123456789012",
-    nama: "Admin Wawo",
-    email: "admin@wawo.com",
-    role: "admin",
-  },
-  {
-    id: "f2b4d749-5f4b-5b36-9eaf-234567890123",
-    nama: "Staf Medis 1",
-    email: "staf1@wawo.com",
-    role: "staf",
-  },
-];
-
 export const getUsers = async (): Promise<User[]> => {
-  if (
-    process.env.NEXT_PUBLIC_SUPABASE_URL === "YOUR_SUPABASE_URL" ||
-    !process.env.NEXT_PUBLIC_SUPABASE_URL
-  ) {
-    return Promise.resolve(mockUsers); // Return mock data if credentials aren't set
-  }
-
   const { data, error } = await supabase
     .from("users")
     .select("*")
@@ -46,58 +23,52 @@ export const getUsers = async (): Promise<User[]> => {
 export const createUser = async (
   user: Omit<User, "id" | "created_at">,
 ): Promise<User> => {
-  if (
-    process.env.NEXT_PUBLIC_SUPABASE_URL === "YOUR_SUPABASE_URL" ||
-    !process.env.NEXT_PUBLIC_SUPABASE_URL
-  ) {
-    const newUser = {
-      ...user,
-      id: Math.random().toString(),
-      created_at: new Date().toISOString(),
-    };
-    mockUsers = [newUser, ...mockUsers];
-    return Promise.resolve(newUser);
+  // Try to create an auth user first. Since we are on client side, this will sign in the new user.
+  // To avoid disrupting the current admin's session, a proper implementation would use an Edge Function 
+  // with service_role key. For this demo, we will attempt signUp.
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email: user.email,
+    password: 'Password123!', // Default password for new users
+    options: {
+      data: {
+        nama: user.nama,
+        role: user.role,
+      }
+    }
+  });
+
+  if (authError) {
+    if (authError.message.includes('User already registered')) {
+      throw new Error("Email sudah terdaftar. Gunakan email lain.");
+    }
+    console.error("Supabase auth insert error:", authError);
+    throw new Error(authError.message);
   }
 
-  // NOTE: In a real Supabase application, creating a user requires using Supabase Auth (admin API)
-  // to create the account first, which then triggers a function to insert into the public.users table.
-  // For the sake of this demo, we will attempt to insert directly if the foreign key allows it,
-  // or return a mocked response if it fails due to auth.users constraint.
-  const { data, error } = await supabase
-    .from("users")
-    .insert([{ ...user, id: crypto.randomUUID() }])
-    .select()
-    .single();
-
-  if (error) {
-    console.warn(
-      "Direct insert to public.users failed (likely due to auth.users foreign key constraint). Using mock data for demo.",
-      error,
-    );
-    const newUser = {
-      ...user,
-      id: crypto.randomUUID(),
-      created_at: new Date().toISOString(),
-    };
-    return Promise.resolve(newUser);
+  // The database trigger will automatically insert into the users table.
+  // We can just fetch the newly created user from the users table.
+  if (authData.user) {
+    const { data, error } = await supabase
+      .from("users")
+      .select()
+      .eq("id", authData.user.id)
+      .single();
+    
+    if (error) {
+      console.error("Supabase user fetch error:", error);
+      // Fallback
+      return { id: authData.user.id, ...user };
+    }
+    return data as User;
   }
-  return data as User;
+
+  throw new Error("Gagal membuat pengguna");
 };
 
 export const updateUser = async (
   id: string,
   updates: Partial<User>,
 ): Promise<User> => {
-  if (
-    process.env.NEXT_PUBLIC_SUPABASE_URL === "YOUR_SUPABASE_URL" ||
-    !process.env.NEXT_PUBLIC_SUPABASE_URL
-  ) {
-    mockUsers = mockUsers.map((item) =>
-      item.id === id ? { ...item, ...updates } : item,
-    );
-    return Promise.resolve(mockUsers.find((item) => item.id === id)!);
-  }
-
   const { data, error } = await supabase
     .from("users")
     .update({ ...updates })
@@ -105,21 +76,16 @@ export const updateUser = async (
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Supabase user update error:", error);
+    throw new Error(error.message || "Failed to update user");
+  }
   return data as User;
 };
 
 export const deleteUser = async (id: string): Promise<void> => {
-  if (
-    process.env.NEXT_PUBLIC_SUPABASE_URL === "YOUR_SUPABASE_URL" ||
-    !process.env.NEXT_PUBLIC_SUPABASE_URL
-  ) {
-    mockUsers = mockUsers.filter((item) => item.id !== id);
-    return Promise.resolve();
-  }
-
-  // NOTE: In a real app, you would delete the auth.users record via Admin API.
   const { error } = await supabase.from("users").delete().eq("id", id);
 
   if (error) throw error;
 };
+

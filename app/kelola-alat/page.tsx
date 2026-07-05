@@ -28,21 +28,23 @@ export default function KelolaAlatPage() {
     catatan: "",
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     try {
-      setLoading(true);
       const data = await getAlatMedis();
       setItems(data);
     } catch (error) {
       console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      await fetchData();
+      setLoading(false);
+    };
+    load();
+  }, []);
 
   const handleOpenModal = (item?: AlatMedis) => {
     if (item) {
@@ -77,9 +79,9 @@ export default function KelolaAlatPage() {
       }
       setIsModalOpen(false);
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving data:", error);
-      alert("Gagal menyimpan data.");
+      alert(`Gagal menyimpan data: ${error?.message || "Terjadi kesalahan"}`);
     }
   };
 
@@ -156,6 +158,12 @@ export default function KelolaAlatPage() {
                   scope="col"
                   className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100"
                 >
+                  No
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100"
+                >
                   Nama Alat
                 </th>
                 <th
@@ -174,7 +182,13 @@ export default function KelolaAlatPage() {
                   scope="col"
                   className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100"
                 >
-                  Status
+                  Status/Keterangan
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100"
+                >
+                  Tanggal
                 </th>
                 <th
                   scope="col"
@@ -204,18 +218,16 @@ export default function KelolaAlatPage() {
                   </td>
                 </tr>
               ) : (
-                filteredItems.map((item) => (
+                filteredItems.map((item, index) => (
                   <tr
                     key={item.id}
                     className="hover:bg-slate-50 transition-colors"
                   >
+                    <td className="px-6 py-3 text-slate-600 text-sm whitespace-nowrap">
+                      {index + 1}
+                    </td>
                     <td className="px-6 py-3 font-medium text-slate-900 whitespace-nowrap">
                       {item.nama_alat}
-                      {item.catatan && (
-                        <div className="text-[10px] text-slate-500 font-normal mt-0.5">
-                          {item.catatan}
-                        </div>
-                      )}
                     </td>
                     <td className="px-6 py-3 text-slate-600 text-sm whitespace-nowrap">
                       {item.jenis_alat}
@@ -236,6 +248,14 @@ export default function KelolaAlatPage() {
                       >
                         {item.status}
                       </span>
+                      {item.catatan && (
+                        <div className="text-[10px] text-slate-500 font-normal mt-1">
+                          {item.catatan}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-3 text-slate-600 text-sm whitespace-nowrap">
+                      {item.updated_at ? new Date(item.updated_at).toLocaleDateString('id-ID') : new Date(item.created_at || '').toLocaleDateString('id-ID')}
                     </td>
                     <td className="px-6 py-3 text-right text-sm whitespace-nowrap">
                       <button
@@ -375,11 +395,11 @@ export default function KelolaAlatPage() {
                     required
                     type="number"
                     min="0"
-                    value={formData.jumlah}
+                    value={Number.isNaN(formData.jumlah) ? "" : formData.jumlah}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        jumlah: parseInt(e.target.value),
+                        jumlah: parseInt(e.target.value) || 0,
                       })
                     }
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 placeholder-slate-400"

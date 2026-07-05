@@ -14,6 +14,7 @@ export default function KelolaPenggunaPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,21 +27,31 @@ export default function KelolaPenggunaPage() {
     role: "staf" as User["role"],
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     try {
-      setLoading(true);
       const data = await getUsers();
       setUsers(data);
     } catch (error) {
       console.error("Error fetching users:", error);
-    } finally {
-      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const { supabase } = await import("../../lib/supabaseClient");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+         const { data: userRecord } = await supabase.from('users').select('role').eq('id', user.id).single();
+         setCurrentUserRole(userRecord?.role || 'staf');
+      } else {
+         setCurrentUserRole('admin'); // Fallback for demo
+      }
+      await fetchData();
+      setLoading(false);
+    };
+    load();
+  }, []);
 
   const handleOpenModal = (user?: User) => {
     if (user) {
@@ -67,9 +78,11 @@ export default function KelolaPenggunaPage() {
       }
       setIsModalOpen(false);
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving data:", error);
-      alert("Gagal menyimpan data pengguna.");
+      alert(
+        `Gagal menyimpan data pengguna: ${error?.message || "Terjadi kesalahan"}`,
+      );
     }
   };
 
@@ -101,13 +114,15 @@ export default function KelolaPenggunaPage() {
             Manajemen akun staf dan administrator sistem.
           </p>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-md font-medium text-xs shadow-sm shadow-teal-200 transition-colors w-full sm:w-auto inline-flex items-center justify-center"
-        >
-          <Plus className="w-4 h-4 mr-1" />
-          Tambah Pengguna
-        </button>
+        {currentUserRole === 'admin' && (
+          <button
+            onClick={() => handleOpenModal()}
+            className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-md font-medium text-xs shadow-sm shadow-teal-200 transition-colors w-full sm:w-auto inline-flex items-center justify-center"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Tambah Pengguna
+          </button>
+        )}
       </div>
 
       {/* Search and Filters */}
@@ -144,6 +159,12 @@ export default function KelolaPenggunaPage() {
                   scope="col"
                   className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100"
                 >
+                  No
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100"
+                >
                   Nama Pengguna
                 </th>
                 <th
@@ -158,19 +179,21 @@ export default function KelolaPenggunaPage() {
                 >
                   Peran
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100 text-right"
-                >
-                  Aksi
-                </th>
+                {currentUserRole === 'admin' && (
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100 text-right"
+                  >
+                    Aksi
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-6 py-8 text-center text-sm text-slate-500"
                   >
                     Memuat data...
@@ -179,18 +202,21 @@ export default function KelolaPenggunaPage() {
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-6 py-8 text-center text-sm text-slate-500"
                   >
                     Tidak ada pengguna ditemukan.
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user) => (
+                filteredUsers.map((user, index) => (
                   <tr
                     key={user.id}
                     className="hover:bg-slate-50 transition-colors"
                   >
+                    <td className="px-6 py-3 text-slate-600 text-sm whitespace-nowrap">
+                      {index + 1}
+                    </td>
                     <td className="px-6 py-3 font-medium text-slate-900 whitespace-nowrap">
                       {user.nama}
                     </td>
@@ -205,20 +231,22 @@ export default function KelolaPenggunaPage() {
                         {user.role}
                       </span>
                     </td>
-                    <td className="px-6 py-3 text-right text-sm whitespace-nowrap">
-                      <button
-                        onClick={() => handleOpenModal(user)}
-                        className="text-teal-600 hover:text-teal-900 mr-3"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(user.id)}
-                        className="text-rose-600 hover:text-rose-900"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
+                    {currentUserRole === 'admin' && (
+                      <td className="px-6 py-3 text-right text-sm whitespace-nowrap">
+                        <button
+                          onClick={() => handleOpenModal(user)}
+                          className="text-teal-600 hover:text-teal-900 mr-3"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(user.id)}
+                          className="text-rose-600 hover:text-rose-900"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -259,22 +287,24 @@ export default function KelolaPenggunaPage() {
                   {user.role}
                 </span>
               </div>
-              <div className="flex justify-end items-end mt-4">
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => handleOpenModal(user)}
-                    className="text-teal-600 hover:text-teal-900 mr-3"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(user.id)}
-                    className="text-rose-600 hover:text-rose-900"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+              {currentUserRole === 'admin' && (
+                <div className="flex justify-end items-end mt-4">
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => handleOpenModal(user)}
+                      className="text-teal-600 hover:text-teal-900 mr-3"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(user.id)}
+                      className="text-rose-600 hover:text-rose-900"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           ))
         )}
