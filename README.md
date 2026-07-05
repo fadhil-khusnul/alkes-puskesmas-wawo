@@ -92,20 +92,6 @@ Agar fitur PWA installer muncul di handphone Anda, koneksi harus berjalan di pro
 3. Salin alamat HTTPS publik yang dihasilkan oleh Ngrok, contoh: `https://abcd-123-45.ngrok-free.app`.
 4. Buka tautan HTTPS tersebut di browser Google Chrome / Safari handphone Anda.
 
-### Mengatasi Kendala PWA Service Worker (Security Redirect):
-Bila Anda menghadapi error keamanan registrasi Service Worker (seperti `SecurityError: Failed to register a ServiceWorker... behind a redirect`) saat menggunakan domain publik HTTP/HTTPS ngrok:
-
-1. Buka browser **Google Chrome** di handphone Anda.
-2. Masuk ke halaman bendera konfigurasi chrome dengan mengetikkan:
-   ```text
-   chrome://flags
-   ```
-3. Cari opsi: **"Insecure origins treated as secure"**.
-4. Aktifkan (*Enable*) opsi tersebut, lalu masukkan URL Ngrok Anda ke dalam kotak input teks di bawahnya (contoh: `http://abcd-123-45.ngrok-free.app` atau alamat HTTPS-nya).
-5. Klik tombol **Relaunch / Restart Chrome** di pojok kanan bawah browser HP Anda.
-6. Akses kembali URL Ngrok Anda. Tombol/Notifikasi instalan aplikasi PWA ("Tambahkan ke Layar Utama" / "Instal Aplikasi") sekarang akan muncul dan berjalan secara mandiri sebagai standalone app di homescreen handphone Anda.
-
----
 
 ## 📁 Struktur Folder Utama
 - `/app` - Halaman utama, router, dan API server actions Next.js.
