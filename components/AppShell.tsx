@@ -7,7 +7,9 @@ import InstallPWA from "./InstallPWA";
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  if (pathname === "/login") {
+  const isPublicPage = pathname === "/" || pathname === "/login";
+
+  if (isPublicPage) {
     return (
       <>
         {children}

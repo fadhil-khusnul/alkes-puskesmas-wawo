@@ -11,8 +11,11 @@ import {
   Info,
   LogOut,
   Menu,
+  ChevronLeft,
+  ChevronRight,
+  Settings,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { devGetUser, devLogout } from "../app/actions";
 
@@ -23,6 +26,7 @@ const navItems = [
   { name: "Kelola Pengguna", href: "/kelola-pengguna", icon: Users },
   { name: "Kelola Alat Medis", href: "/kelola-alat", icon: Stethoscope },
   { name: "Laporan", href: "/laporan", icon: FileText },
+  { name: "Setting Landing Page", href: "/landing-page-setting", icon: Settings },
   { name: "Profil", href: "/profil", icon: User },
   { name: "Tentang Kami", href: "/tentang", icon: Info },
 ];
@@ -31,7 +35,32 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [userData, setUserData] = useState({ name: "Admin System", role: "Administrator" });
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved === "true") {
+      setIsCollapsed(true);
+    }
+  }, []);
+
+  const toggleCollapse = () => {
+    const nextVal = !isCollapsed;
+    setIsCollapsed(nextVal);
+    localStorage.setItem("sidebar-collapsed", String(nextVal));
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -60,7 +89,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     if (isDev) {
       await devLogout();
-      window.location.href = "/login";
+      window.location.href = "/";
       return;
     }
 
@@ -74,110 +103,127 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
     } else {
       await supabase.auth.signOut();
     }
-    window.location.href = "/login";
+    window.location.href = "/";
   };
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden text-sm">
-      {/* Mobile sidebar overlay */}
-      {isOpen && (
+      {/* Mobile sidebar overlay */ }
+      { isOpen && (
         <div
           className="fixed inset-0 z-20 bg-black/50 lg:hidden"
-          onClick={() => setIsOpen(false)}
+          onClick={ () => setIsOpen(false) }
         />
-      )}
+      ) }
 
-      {/* Sidebar */}
+      {/* Sidebar */ }
       <div
-        className={`
-        fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 text-white flex flex-col border-r border-slate-800 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
+        className={ `
+        fixed inset-y-0 left-0 z-30 bg-slate-900 text-white flex flex-col border-r border-slate-800 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
+        ${isCollapsed ? "lg:w-20" : "lg:w-64"}
+        w-64
       `}
       >
-        <div className="p-6 border-b border-slate-800 flex items-center gap-3">
-          <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center font-bold text-white">
+        <div className={ `p-6 border-b border-slate-800 flex items-center ${isCollapsed ? "justify-center" : "gap-3"}` }>
+          <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center font-bold text-white shrink-0">
             W
           </div>
-          <div>
-            <h1 className="font-bold text-sm leading-tight uppercase tracking-wider text-white truncate">
-              Puskesmas Wawo
-            </h1>
-            <p className="text-[10px] text-slate-400">Med-Manage System v1.0</p>
-          </div>
+          { !isCollapsed && (
+            <div>
+              <h1 className="font-bold text-sm leading-tight uppercase tracking-wider text-white truncate">
+                Puskesmas Wawo
+              </h1>
+              <p className="text-[10px] text-slate-400">Med-Manage System v1.0</p>
+            </div>
+          ) }
         </div>
 
         <nav className="flex-1 py-6 overflow-y-auto">
           <ul className="space-y-1">
-            {navItems.map((item) => {
+            { navItems.map((item) => {
               const Icon = item.icon;
               // Highlight active link for visual feedback matching the theme
               const isActive = pathname === item.href;
               return (
-                <li key={item.name} className="px-4">
+                <li key={ item.name } className="px-4">
                   <Link
-                    href={item.href}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-colors ${
-                      isActive
+                    href={ item.href }
+                    className={ `flex items-center rounded-md transition-colors ${isCollapsed ? "justify-center p-2.5" : "gap-3 px-4 py-2.5"
+                      } ${isActive
                         ? "bg-teal-600 text-white"
                         : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                    }`}
-                    onClick={() => setIsOpen(false)}
+                      }` }
+                    onClick={ () => setIsOpen(false) }
+                    title={ isCollapsed ? item.name : undefined }
                   >
-                    <Icon className="w-4 h-4" />
-                    {item.name}
+                    <Icon className="w-4 h-4 shrink-0" />
+                    { !isCollapsed && <span>{ item.name }</span> }
                   </Link>
                 </li>
               );
-            })}
+            }) }
           </ul>
 
-          <div className="p-6 border-t border-slate-800 mt-6">
+          <div className={ `p-6 border-t border-slate-800 mt-6 ${isCollapsed ? "flex justify-center" : ""}` }>
             <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-rose-400 hover:bg-slate-800 hover:text-rose-300 rounded-md transition-colors"
+              onClick={ handleLogout }
+              className={ `flex items-center text-rose-400 hover:bg-slate-800 hover:text-rose-300 rounded-md transition-colors ${isCollapsed ? "p-2.5" : "gap-3 px-4 py-2.5 w-full"
+                }` }
+              title={ isCollapsed ? "Keluar" : undefined }
             >
-              <LogOut className="w-4 h-4" />
-              Keluar
+              <LogOut className="w-4 h-4 shrink-0" />
+              { !isCollapsed && <span>Keluar</span> }
             </button>
           </div>
         </nav>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content */ }
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Desktop Header */}
-        <header className="hidden lg:flex h-16 bg-white border-b border-slate-200 px-8 items-center justify-between shrink-0">
+        {/* Desktop Header */ }
+        <header className="hidden lg:flex h-16 bg-white border-b border-slate-200 px-4 items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
+            <button
+              onClick={ toggleCollapse }
+              className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors mr-2"
+              title={ isCollapsed ? "Expand Sidebar" : "Collapse Sidebar" }
+            >
+              { isCollapsed ? (
+                <ChevronRight className="w-5 h-5" />
+              ) : (
+                <ChevronLeft className="w-5 h-5" />
+              ) }
+            </button>
             <h2 className="text-lg font-semibold text-slate-800 tracking-tight">
-              {navItems.find((item) => item.href === pathname)?.name ||
-                "Dashboard"}
+              { navItems.find((item) => item.href === pathname)?.name ||
+                "Dashboard" }
             </h2>
             <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-medium uppercase tracking-wider">
-              {new Date().toLocaleDateString("id-ID", {
+              { new Date().toLocaleDateString("id-ID", {
                 month: "long",
                 year: "numeric",
-              })}
+              }) }
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <button 
+            <div className="relative" ref={dropdownRef}>
+              <button
                 className="flex items-center gap-3 focus:outline-none hover:bg-slate-50 p-1.5 rounded-lg transition-colors"
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
+                onClick={ () => setIsDropdownOpen(!isDropdownOpen) }
               >
                 <div className="text-right">
                   <p className="text-xs font-bold text-slate-700 leading-tight">
-                    {userData.name}
+                    { userData.name }
                   </p>
-                  <p className="text-[10px] text-slate-500 uppercase">{userData.role}</p>
+                  <p className="text-[10px] text-slate-500 uppercase">{ userData.role }</p>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-xs uppercase">
-                  {userData.name.charAt(0)}
+                  { userData.name.charAt(0) }
                 </div>
               </button>
 
-              {isDropdownOpen && (
+              { isDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-50 overflow-hidden">
                   <div className="py-1">
                     <Link
@@ -189,7 +235,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
                     </Link>
                     <div className="h-px bg-slate-100 my-1"></div>
                     <button
-                      onClick={handleLogout}
+                      onClick={ handleLogout }
                       className="flex w-full items-center px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
                     >
                       <LogOut className="w-4 h-4 mr-2" />
@@ -197,12 +243,12 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
                     </button>
                   </div>
                 </div>
-              )}
+              ) }
             </div>
           </div>
         </header>
 
-        {/* Mobile Header */}
+        {/* Mobile Header */ }
         <div className="lg:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200 shrink-0">
           <div className="flex items-center">
             <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center font-bold text-white mr-3">
@@ -213,16 +259,16 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
             </span>
           </div>
           <button
-            onClick={() => setIsOpen(true)}
+            onClick={ () => setIsOpen(true) }
             className="p-2 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 focus:outline-none"
           >
             <Menu className="w-6 h-6" />
           </button>
         </div>
 
-        {/* Page Content */}
+        {/* Page Content */ }
         <main className="flex-1 flex flex-col h-full overflow-hidden p-4 sm:p-6 lg:p-8 overflow-y-auto">
-          {children}
+          { children }
         </main>
       </div>
     </div>

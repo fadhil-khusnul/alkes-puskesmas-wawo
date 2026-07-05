@@ -48,3 +48,12 @@ model LogLaporan {
 
   @@map("log_laporan")
 }
+
+model LandingSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String   @db.Text
+  updated_at  DateTime @default(now()) @updatedAt
+
+  @@map("landing_settings")
+}

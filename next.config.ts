@@ -36,10 +36,28 @@ const nextConfig: NextConfig = {
   transpilePackages: ['motion'],
   webpack: (config, {dev}) => {
     // HMR is disabled in AI Studio via DISABLE_HMR env var.
-    // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
+    // Do not modify—file watching is disabled to prevent flickering during agent edits.
     if (dev && process.env.DISABLE_HMR === 'true') {
       config.watchOptions = {
         ignored: /.*/,
+      };
+    } else if (dev) {
+      const originalIgnored = config.watchOptions?.ignored;
+      let newIgnored: any;
+      
+      if (originalIgnored instanceof RegExp) {
+        newIgnored = new RegExp(`${originalIgnored.source}|public/sw\\.js(?:\\.map)?$`);
+      } else if (typeof originalIgnored === 'string') {
+        newIgnored = [originalIgnored, '**/public/sw.js', '**/public/sw.js.map'];
+      } else if (Array.isArray(originalIgnored)) {
+        newIgnored = [...originalIgnored, '**/public/sw.js', '**/public/sw.js.map'];
+      } else {
+        newIgnored = /public\/sw\.js(?:\.map)?$/;
+      }
+      
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: newIgnored,
       };
     }
     return config;

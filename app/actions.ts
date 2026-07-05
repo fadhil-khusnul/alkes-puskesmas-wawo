@@ -2,11 +2,16 @@
 
 import { prisma } from "../lib/prisma";
 import { cookies } from "next/headers";
+import crypto from "crypto";
+
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password + "wawo-salt-key-123!").digest("hex");
+}
 
 // Authentication Actions (Development Mode only)
 export async function devLogin(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || user.password !== password) {
+  if (!user || user.password !== hashPassword(password)) {
     throw new Error("Invalid login credentials");
   }
   
@@ -26,7 +31,7 @@ export async function devRegister(email: string, password: string, nama: string)
   const user = await prisma.user.create({
     data: {
       email,
-      password,
+      password: hashPassword(password),
       nama: nama || email.split('@')[0],
       role: 'admin',
     }
@@ -136,20 +141,45 @@ export async function devCreateUser(user: any) {
   const created = await prisma.user.create({
     data: {
       ...user,
-      password: 'Password123!',
+      password: hashPassword(user.password || 'Password123!'),
     }
   });
   return created;
 }
 
 export async function devUpdateUser(id: string, updates: any) {
+  const dataToUpdate = { ...updates };
+  if (dataToUpdate.password) {
+    dataToUpdate.password = hashPassword(dataToUpdate.password);
+  }
+  
   const user = await prisma.user.update({
     where: { id },
-    data: updates
+    data: dataToUpdate
   });
   return user;
 }
 
 export async function devDeleteUser(id: string) {
   await prisma.user.delete({ where: { id } });
+}
+
+export async function getLandingSettings() {
+  const settings = await prisma.landingSetting.findMany();
+  const result: Record<string, string> = {};
+  for (const s of settings) {
+    result[s.key] = s.value;
+  }
+  return result;
+}
+
+export async function updateLandingSettings(updates: Record<string, string>) {
+  for (const [key, value] of Object.entries(updates)) {
+    await prisma.landingSetting.upsert({
+      where: { key },
+      update: { value },
+      create: { key, value }
+    });
+  }
+  return { success: true };
 }

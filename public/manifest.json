@@ -3,6 +3,7 @@
   "short_name": "Alat Medis",
   "description": "Sistem Pengelolaan Alat Medis Puskesmas Wawo",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0f766e",
   "theme_color": "#0f766e",

@@ -1,9 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 
 dotenv.config({ path: '.env.local' });
 
 const prisma = new PrismaClient();
+
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password + "wawo-salt-key-123!").digest("hex");
+}
 
 async function main() {
   console.log('Cleaning up database...');
@@ -18,7 +23,7 @@ async function main() {
       email: 'admin@wawo.com',
       nama: 'Admin Wawo',
       role: 'admin',
-      password: 'password123',
+      password: hashPassword('password123'),
     },
   });
 
@@ -28,7 +33,7 @@ async function main() {
       email: 'staf1@wawo.com',
       nama: 'Staf Medis 1',
       role: 'staf',
-      password: 'password123',
+      password: hashPassword('password123'),
     },
   });
 
@@ -178,6 +183,45 @@ async function main() {
 
   for (const log of logs) {
     await prisma.logLaporan.create({ data: log });
+  }
+
+  console.log('Seeding landing settings...');
+  await prisma.landingSetting.deleteMany({});
+  
+  const settings = [
+    { key: 'hero_headline', value: 'Digitalisasi Pengelolaan Alat Medis Puskesmas Wawo' },
+    { key: 'hero_subheadline', value: 'Meningkatkan efisiensi, akurasi pencatatan, dan keamanan lingkungan dari alat medis berpotensi infeksius.' },
+    {
+      key: 'hero_slides',
+      value: JSON.stringify([
+        {
+          image: '/images/hero1.png',
+          title: 'Digitalisasi Pengelolaan Alat Medis',
+          subtitle: 'Puskesmas Wawo, Kabupaten Bima'
+        },
+        {
+          image: '/images/hero2.png',
+          title: 'Akurasi Pencatatan & Keamanan',
+          subtitle: 'Sistem Informasi Terkomputerisasi untuk Tenaga Medis'
+        },
+        {
+          image: '/images/hero3.png',
+          title: 'Pelayanan Kesehatan Optimal',
+          subtitle: 'Mendukung pencegahan risiko infeksi dan pencemaran'
+        }
+      ])
+    },
+    { key: 'about_point1_title', value: 'Efisiensi Pencatatan' },
+    { key: 'about_point1_desc', value: 'Mengubah proses manual menjadi sistem komputerisasi digital untuk kecepatan dan ketepatan data.' },
+    { key: 'about_point2_title', value: 'Pemantauan Real-Time' },
+    { key: 'about_point2_desc', value: 'Memantau jumlah dan status alat medis padat seperti jarum suntik, perban, dan botol infus secara langsung.' },
+    { key: 'about_point3_title', value: 'Mencegah Risiko' },
+    { key: 'about_point3_desc', value: 'Pengelolaan yang baik mencegah dampak negatif pencemaran lingkungan dan insiden kesehatan di masyarakat.' },
+    { key: 'profile_text', value: 'Puskesmas Wawo merupakan ujung tombak pelayanan kesehatan dasar bagi masyarakat di berbagai desa di wilayah Kecamatan Wawo, Kabupaten Bima. Sistem ini didedikasikan untuk mendukung operasional para tenaga medis dalam memberikan pelayanan yang optimal, aman, dan berstandar tinggi.' }
+  ];
+
+  for (const setting of settings) {
+    await prisma.landingSetting.create({ data: setting });
   }
 
   console.log('Seeding finished successfully.');

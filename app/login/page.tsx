@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import { devLogin, devRegister } from '../actions';
+import { Eye, EyeOff } from 'lucide-react';
 
 const isDev = process.env.NEXT_PUBLIC_APP_ENV === 'development';
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const router = useRouter();
@@ -25,11 +27,14 @@ export default function LoginPage() {
     const password = formData.get('password') as string;
     const nama = formData.get('nama') as string;
 
+    let keepLoading = false;
+
     try {
       if (isDev) {
         if (isLogin) {
           await devLogin(email, password);
           setSuccessMsg('Berhasil masuk! Mengarahkan ke dashboard...');
+          keepLoading = true;
           setTimeout(() => {
             window.location.href = '/dashboard';
           }, 800);
@@ -49,6 +54,7 @@ export default function LoginPage() {
 
       if (isDemoMode) {
         document.cookie = "demo_auth=true; path=/; max-age=86400";
+        keepLoading = true;
         window.location.href = '/dashboard';
         return;
       }
@@ -73,6 +79,7 @@ export default function LoginPage() {
         }
         
         setSuccessMsg('Berhasil masuk! Mengarahkan ke dashboard...');
+        keepLoading = true;
         
         // Wait a tiny bit for cookies to be set by the auth state change listener, then do a full page reload
         setTimeout(() => {
@@ -117,7 +124,9 @@ export default function LoginPage() {
       console.error('Auth error:', err);
       setError(err.message || 'Terjadi kesalahan');
     } finally {
-      setLoading(false);
+      if (!keepLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -179,14 +188,27 @@ export default function LoginPage() {
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
               Password
             </label>
-            <input
-              name="password"
-              type="password"
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 placeholder-slate-400"
-              placeholder="••••••••"
-              required
-              minLength={6}
-            />
+            <div className="relative">
+              <input
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                className="w-full pl-3 pr-10 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 placeholder-slate-400"
+                placeholder="••••••••"
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </div>
           <button 
             type="submit" 

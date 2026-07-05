@@ -8,15 +8,29 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  const { pathname } = request.nextUrl;
+
+  // Bypass auth checks for static PWA assets
+  if (
+    pathname === "/sw.js" ||
+    pathname === "/manifest.json" ||
+    pathname.endsWith(".js.map") ||
+    pathname.startsWith("/icon-")
+  ) {
+    return response;
+  }
+
   const isDev = process.env.NEXT_PUBLIC_APP_ENV === "development";
 
   // If in development mode, check for a local dev session cookie
   if (isDev) {
     const devSession = request.cookies.get("dev_session")?.value;
-    if (!devSession && request.nextUrl.pathname !== "/login") {
+    const isPublicRoute = pathname === "/" || pathname === "/login";
+
+    if (!devSession && !isPublicRoute) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    if (devSession && request.nextUrl.pathname === "/login") {
+    if (devSession && pathname === "/login") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
     return response;
@@ -31,10 +45,12 @@ export async function middleware(request: NextRequest) {
   // If in demo mode, check for a simple cookie
   if (isDemoMode) {
     const demoAuth = request.cookies.get("demo_auth")?.value;
-    if (!demoAuth && request.nextUrl.pathname !== "/login") {
+    const isPublicRoute = pathname === "/" || pathname === "/login";
+
+    if (!demoAuth && !isPublicRoute) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    if (demoAuth && request.nextUrl.pathname === "/login") {
+    if (demoAuth && pathname === "/login") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
     return response;
@@ -96,13 +112,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect routes except login
-  if (!user && request.nextUrl.pathname !== "/login") {
+  // Protect routes except public ones
+  const isPublicRoute = pathname === "/" || pathname === "/login";
+  if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   // If user is logged in and trying to access login page, redirect to dashboard
-  if (user && request.nextUrl.pathname === "/login") {
+  if (user && pathname === "/login") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

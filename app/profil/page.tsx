@@ -37,7 +37,7 @@ export default function ProfilPage() {
         }
 
         const { data: { user } } = await supabase.auth.getUser();
-        
+
         if (user) {
           const { data: userRecord } = await supabase
             .from("users")
@@ -76,7 +76,7 @@ export default function ProfilPage() {
       // In a real application, you might verify the current password first.
       // For Supabase, to update the password we just call updateUser.
       const updates: any = {};
-      
+
       if (formData.newPassword) {
         updates.password = formData.newPassword;
       }
@@ -95,19 +95,19 @@ export default function ProfilPage() {
         // We might also want to update the user's name in our public.users table
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-           if (formData.username) {
-              const { error: dbError } = await supabase
-                .from("users")
-                .update({ nama: formData.username })
-                .eq("id", user.id);
-              
-              if (dbError) throw dbError;
-           }
+          if (formData.username) {
+            const { error: dbError } = await supabase
+              .from("users")
+              .update({ nama: formData.username })
+              .eq("id", user.id);
 
-           if (Object.keys(updates).length > 0) {
-             const { error: authError } = await supabase.auth.updateUser(updates);
-             if (authError) throw authError;
-           }
+            if (dbError) throw dbError;
+          }
+
+          if (Object.keys(updates).length > 0) {
+            const { error: authError } = await supabase.auth.updateUser(updates);
+            if (authError) throw authError;
+          }
         }
       }
 
@@ -122,7 +122,7 @@ export default function ProfilPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-lg font-semibold text-slate-800 tracking-tight">
           Profil Pengguna
@@ -139,42 +139,42 @@ export default function ProfilPage() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-800">
-              {loading ? "Memuat..." : formData.username}
+              { loading ? "Memuat..." : formData.username }
             </h2>
             <p className="text-sm text-slate-500 uppercase tracking-wider font-semibold mt-1">
-              {loading ? "..." : formData.peran}
+              { loading ? "..." : formData.peran }
             </p>
           </div>
         </div>
 
         <div className="p-6">
-          {message.text && (
-            <div className={`p-4 rounded-md text-sm mb-6 ${message.type === 'error' ? 'bg-rose-50 text-rose-600 border border-rose-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'}`}>
-              {message.text}
+          { message.text && (
+            <div className={ `p-4 rounded-md text-sm mb-6 ${message.type === 'error' ? 'bg-rose-50 text-rose-600 border border-rose-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'}` }>
+              { message.text }
             </div>
-          )}
+          ) }
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={ handleSubmit } className="space-y-5">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
                 Username / Nama
               </label>
               <input
                 type="text"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                value={ formData.username }
+                onChange={ (e) => setFormData({ ...formData, username: e.target.value }) }
                 className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
                 placeholder="Nama Anda"
               />
             </div>
-            
+
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
                 Peran
               </label>
               <input
                 type="text"
-                value={formData.peran}
+                value={ formData.peran }
                 disabled
                 className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500 cursor-not-allowed uppercase"
               />
@@ -190,34 +190,34 @@ export default function ProfilPage() {
                   </label>
                   <input
                     type="password"
-                    value={formData.currentPassword}
-                    onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
+                    value={ formData.currentPassword }
+                    onChange={ (e) => setFormData({ ...formData, currentPassword: e.target.value }) }
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
                     placeholder="Masukkan sandi saat ini"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
                     New Password
                   </label>
                   <input
                     type="password"
-                    value={formData.newPassword}
-                    onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                    value={ formData.newPassword }
+                    onChange={ (e) => setFormData({ ...formData, newPassword: e.target.value }) }
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
                     placeholder="Sandi baru (opsional)"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
                     Confirm Password
                   </label>
                   <input
                     type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    value={ formData.confirmPassword }
+                    onChange={ (e) => setFormData({ ...formData, confirmPassword: e.target.value }) }
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900"
                     placeholder="Ulangi sandi baru"
                   />
@@ -228,10 +228,10 @@ export default function ProfilPage() {
             <div className="pt-6 flex justify-end">
               <button
                 type="submit"
-                disabled={updating}
+                disabled={ updating }
                 className="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {updating ? "Menyimpan..." : "Update Profil"}
+                { updating ? "Menyimpan..." : "Update Profil" }
               </button>
             </div>
           </form>
