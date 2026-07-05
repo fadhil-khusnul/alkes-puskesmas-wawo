@@ -8,6 +8,20 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  const isDev = process.env.NEXT_PUBLIC_APP_ENV === "development";
+
+  // If in development mode, check for a local dev session cookie
+  if (isDev) {
+    const devSession = request.cookies.get("dev_session")?.value;
+    if (!devSession && request.nextUrl.pathname !== "/login") {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (devSession && request.nextUrl.pathname === "/login") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    return response;
+  }
+
   const isDemoMode =
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     process.env.NEXT_PUBLIC_SUPABASE_URL === "YOUR_SUPABASE_URL" ||

@@ -11,6 +11,7 @@ export type User = {
   email: string;
   role: UserRole;
   created_at?: string;
+  password?: string;
 };
 
 export const getUsers = async (): Promise<User[]> => {
@@ -32,7 +33,7 @@ export const getUsers = async (): Promise<User[]> => {
 };
 
 export const createUser = async (
-  user: Omit<User, "id" | "created_at">,
+  user: Omit<User, "id" | "created_at"> & { password?: string },
 ): Promise<User> => {
   if (isDev) {
     const data = await devCreateUser(user);
@@ -47,7 +48,7 @@ export const createUser = async (
   // with service_role key. For this demo, we will attempt signUp.
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email: user.email,
-    password: 'Password123!', // Default password for new users
+    password: user.password || 'Password123!', // Default password for new users
     options: {
       data: {
         nama: user.nama,
@@ -86,7 +87,7 @@ export const createUser = async (
 
 export const updateUser = async (
   id: string,
-  updates: Partial<User>,
+  updates: Partial<User> & { password?: string },
 ): Promise<User> => {
   if (isDev) {
     const data = await devUpdateUser(id, updates);
@@ -96,9 +97,13 @@ export const updateUser = async (
     } as User;
   }
 
+  // Supabase auth passwords cannot be updated directly from standard client SDK for another user,
+  // but we strip it here so we don't trigger public database schema errors.
+  const { password, ...supabaseUpdates } = updates;
+
   const { data, error } = await supabase
     .from("users")
-    .update({ ...updates })
+    .update({ ...supabaseUpdates })
     .eq("id", id)
     .select()
     .single();

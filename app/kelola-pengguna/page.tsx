@@ -25,6 +25,7 @@ export default function KelolaPenggunaPage() {
     nama: "",
     email: "",
     role: "staf" as User["role"],
+    password: "",
   });
 
   const fetchData = async () => {
@@ -70,10 +71,11 @@ export default function KelolaPenggunaPage() {
         nama: user.nama,
         email: user.email,
         role: user.role,
+        password: "",
       });
     } else {
       setEditingUser(null);
-      setFormData({ nama: "", email: "", role: "staf" });
+      setFormData({ nama: "", email: "", role: "staf", password: "" });
     }
     setIsModalOpen(true);
   };
@@ -82,7 +84,11 @@ export default function KelolaPenggunaPage() {
     e.preventDefault();
     try {
       if (editingUser) {
-        await updateUser(editingUser.id, formData);
+        const payload = { ...formData };
+        if (!payload.password) {
+          delete (payload as any).password;
+        }
+        await updateUser(editingUser.id, payload);
       } else {
         await createUser(formData);
       }
@@ -379,6 +385,22 @@ export default function KelolaPenggunaPage() {
                   <option value="staf">Staf Medis</option>
                   <option value="admin">Administrator</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  {editingUser ? "Password Baru (Kosongkan jika tidak diubah)" : "Password"}
+                </label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  placeholder={editingUser ? "••••••••" : "Masukkan password"}
+                  required={!editingUser}
+                  minLength={6}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 placeholder-slate-400"
+                />
               </div>
               <div className="pt-4 flex justify-end space-x-3">
                 <button
